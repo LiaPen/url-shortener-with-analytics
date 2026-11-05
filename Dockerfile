@@ -33,9 +33,9 @@ RUN CGO_ENABLED=0 go build \
 # ---- stage 2: run -----------------------------------------------------------
 FROM alpine:3.21
 
-LABEL org.opencontainers.image.title="ATAD project" \
-      org.opencontainers.image.authors="Surname Firstname <firstname.surname@student.upt.ro>" \
-      org.opencontainers.image.source="https://github.com/user/repo"
+LABEL org.opencontainers.image.title="URL Shortener with Analytics" \
+      org.opencontainers.image.authors="Pentek Iulia <iulia.pentek@student.upt.ro>" \
+      org.opencontainers.image.source="https://github.com/LiaPen/url-shortener-with-analytics"
 
 # Run as an unprivileged user. A container process that does not need root
 # should not have it.
