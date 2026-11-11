@@ -1,15 +1,13 @@
 // Entry point for your project.
 //
-// Every ATAD project is a web service in a container. The four routes below are
-// the common contract and are checked automatically: keep them working exactly
-// as specified and add your own routes alongside them.
+// Every ATAD project is a web service in a container. The routes (the four
+// contract ones and this project's own) are in internal/api.
 //
 // --version must also keep working. It prints one line of JSON and exits 0.
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -19,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"atad-project/internal/api"
+	"atad-project/internal/links"
 	"atad-project/internal/version"
 )
 
@@ -41,47 +41,14 @@ func run() error {
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	mux := http.NewServeMux()
-
-	// ---- the common contract: four routes, identical in every project -------
-
-	mux.HandleFunc("GET /version", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = version.WriteJSON(w)
-	})
-
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":         "ok",
-			"uptime_seconds": int(time.Since(started).Seconds()),
-		})
-	})
-
-	// The identity page. Replace the placeholders with your own details; the
-	// marking script reads this page.
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `<!doctype html><html lang="en"><meta charset="utf-8">
-<title>%s</title><body>
-<h1>%s</h1>
-<p>[Surname Firstname], group [group]</p>
-<p>Project [number]: [title]</p>
-</body></html>`, version.Current().App, version.Current().App)
-	})
-
-	// Discards everything the service holds, so tests can start from a known
-	// state without restarting the container. If your project persists data,
-	// this clears what was persisted too.
-	mux.HandleFunc("POST /reset", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: clear your own state here.
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	// ---- your own routes go below -------------------------------------------
+	// All routes, the four contract ones and the project's own, live in
+	// internal/api; main only wires the pieces together and runs the server.
+	store := links.NewStore()
+	handler := api.New(store, started)
 
 	srv := &http.Server{
 		Addr:         ":8080",
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -109,18 +76,4 @@ func run() error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
-}
-
-// writeJSON is the one place that sets the content type, so every response in
-// the service is consistent about it.
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// writeError produces the error shape the common contract requires. Use it for
-// every failure rather than writing the JSON by hand at each call site.
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, map[string]string{"error": code, "message": message})
 }
