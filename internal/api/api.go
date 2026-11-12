@@ -18,7 +18,7 @@ import (
 // Identity shown on GET /. The marking script reads this page.
 const (
 	studentName  = "Pentek Iulia"
-	studentGroup = "[group]" // TODO: grupa ta, ex. "3.1"
+	studentGroup = "DMWD" 
 	projectLine  = "Project 1: URL Shortener with Analytics"
 )
 
